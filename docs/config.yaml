@@ -1,0 +1,77 @@
+# Rule of 40 Screener Configuration
+
+# UI Settings
+ui:
+  theme: auto          # auto | light | dark
+  locale: ja          # ja | en
+  window:
+    width: 1200
+    height: 800
+    remember_position: true
+    remember_size: true
+
+# Data Fetching Settings
+fetch:
+  max_workers: 12     # Maximum concurrent downloads
+  cache_ttl_hours: 24 # Cache time-to-live in hours
+  timeout_seconds: 30 # Request timeout
+  retry_attempts: 3   # Number of retry attempts
+  backoff_factor: 2   # Exponential backoff factor
+
+# Rule of 40 Calculation Settings
+rule40:
+  variant: op         # op | ebitda | both
+  period: ttm         # annual | ttm | mrq_annualized
+  threshold: 40       # Default screening threshold
+  min_revenue: 100000000  # Minimum revenue (USD)
+  
+# Universe Settings
+universe:
+  sources: [sp500, sp400, nasdaq, other]
+  csv_path: null      # Custom CSV file path (symbol,name)
+  exclude_symbols: [] # Symbols to exclude from analysis
+  
+# Data Sources
+data_sources:
+  wikipedia:
+    sp500_url: "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    sp400_url: "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies"
+  nasdaq:
+    ftp_server: "ftp.nasdaqtrader.com"
+    nasdaqlisted_path: "/SymbolDirectory/nasdaqlisted.txt"
+    otherlisted_path: "/SymbolDirectory/otherlisted.txt"
+
+# Cache Settings
+cache:
+  enabled: true
+  database_path: "app_data/cache.db"
+  cleanup_interval_hours: 24
+  max_cache_size_mb: 500
+
+# Logging Settings
+logging:
+  level: INFO         # DEBUG | INFO | WARNING | ERROR
+  file_enabled: true
+  console_enabled: true
+  log_dir: "app_data/logs"
+  max_log_files: 7
+  max_log_size_mb: 10
+
+# Performance Settings
+performance:
+  batch_size: 50      # Symbols per batch
+  ui_update_interval: 100  # Milliseconds between UI updates
+  progress_report_interval: 10  # Symbols between progress updates
+
+# Export Settings
+export:
+  default_format: csv  # csv | xlsx
+  encoding: utf-8      # File encoding
+  include_metadata: true
+  decimal_places: 2
+
+# Advanced Settings
+advanced:
+  enable_telemetry: false  # Anonymous usage statistics
+  auto_update_check: false
+  debug_mode: false

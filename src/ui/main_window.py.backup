@@ -1,0 +1,501 @@
+"""
+メインウィンドウ
+"""
+
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame,
+    QSplitter, QStatusBar, QMenuBar, QMenu, QMenuBar, QProgressBar,
+    QMessageBox, QLabel
+)
+from PySide6.QtCore import Qt, QTimer, QThread
+from PySide6.QtGui import QAction, QKeySequence
+import logging
+
+try:
+    from ..core.data.config_loader import ConfigManager
+    from ..workers.screening_worker import ScreeningWorker, ScreeningThread
+except ImportError:
+    try:
+        from src.core.data.config_loader import ConfigManager
+        from src.ui.workers.screening_worker import ScreeningWorker, ScreeningThread
+    except ImportError:
+        # Fallback for direct execution
+        import sys
+        from pathlib import Path
+        project_root = Path(__file__).parent.parent
+        sys.path.insert(0, str(project_root))
+        from src.core.data.config_loader import ConfigManager
+        from src.ui.workers.screening_worker import ScreeningWorker, ScreeningThread
+
+logger = logging.getLogger(__name__)
+
+
+class MainWindow(QMainWindow):
+    """メインウィンドウ"""
+
+    def __init__(self, config_manager: ConfigManager):
+        super().__init__()
+        self.config_manager = config_manager
+        
+        # スレッド管理
+        self.screening_thread = None
+        self.screening_worker = None
+        
+        # ウィンドウ設定
+        self._setup_window()
+        self._setup_ui()
+        self._setup_menu()
+        self._setup_status_bar()
+        
+        # タイマー設定
+        self._setup_timers()
+        
+        # シグナル接続
+        self._connect_signals()
+        
+        logger.info("Main window initialized")
+
+    def _setup_window(self):
+        """ウィンドウ基本設定"""
+        # ウィンドウタイトル
+        self.setWindowTitle("Rule of 40 Screener")
+
+        # ウィンドウサイズ
+        width = self.config_manager.get("ui.window.width", 1200)
+        height = self.config_manager.get("ui.window.height", 800)
+        self.resize(width, height)
+
+        # ウィンドウ位置（前回の位置を記憶）
+        if self.config_manager.get("ui.window.remember_position", True):
+            # TODO: 前回位置の読み込み
+            pass
+
+        # 中央配置
+        self.center_on_screen()
+
+    def _setup_ui(self):
+        """UI レイアウト設定"""
+        # 中央ウィジェット
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        # メインレイアウト
+        main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # スプリッター作成
+        splitter = QSplitter(Qt.Horizontal)
+        main_layout.addWidget(splitter)
+
+        # 左サイドバー
+        try:
+            from .widgets.side_bar import SideBar
+
+            self.side_bar = SideBar(self.config_manager)
+            self.side_bar.setMaximumWidth(300)
+            self.side_bar.setMinimumWidth(250)
+            splitter.addWidget(self.side_bar)
+        except ImportError:
+            # フォールバック：プレースホルダー
+            side_placeholder = QFrame()
+            side_placeholder.setStyleSheet("background-color: #f0f0f0;")
+            side_placeholder.setMaximumWidth(300)
+            side_placeholder.setMinimumWidth(250)
+            splitter.addWidget(side_placeholder)
+            self.side_bar = None
+
+        # メインエリア
+        try:
+            from .widgets.results_table import ResultsTable
+
+            self.results_table = ResultsTable()
+            splitter.addWidget(self.results_table)
+        except ImportError:
+            # フォールバック：プレースホルダー
+            main_placeholder = QFrame()
+            main_placeholder.setStyleSheet("background-color: #ffffff;")
+            splitter.addWidget(main_placeholder)
+            self.results_table = None
+
+        # スプリッター初期サイズ
+        splitter.setSizes([300, 900])
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+
+    def _setup_menu(self):
+        """メニューバー設定"""
+        menubar = self.menuBar()
+
+        # ファイルメニュー
+        file_menu = menubar.addMenu("ファイル(&F)")
+
+# CSVを開く
+        open_action = QAction("CSVを開く(&O)", self)
+        open_action.setShortcut(QKeySequence.StandardKey.Open)
+        open_action.setStatusTip("CSVファイルを開きます")
+        open_action.triggered.connect(self.open_csv_file)
+        file_menu.addAction(open_action)
+        
+        file_menu.addSeparator()
+        
+        # エクスポート
+        export_menu = file_menu.addMenu("結果をエクスポート(&E)")
+        
+        export_csv_action = QAction("CSV形式(&C)", self)
+        export_csv_action.setStatusTip("結果をCSV形式でエクスポートします")
+        export_csv_action.triggered.connect(lambda: self.export_results("csv"))
+        export_menu.addAction(export_csv_action)
+        
+        export_excel_action = QAction("Excel形式(&X)", self)
+        export_excel_action.setStatusTip("結果をExcel形式でエクスポートします")
+        export_excel_action.triggered.connect(lambda: self.export_results("xlsx"))
+        export_menu.addAction(export_excel_action)
+        
+        export_json_action = QAction("JSON形式(&J)", self)
+        export_json_action.setStatusTip("結果をJSON形式でエクスポートします")
+        export_json_action.triggered.connect(lambda: self.export_results("json"))
+        export_menu.addAction(export_json_action)
+
+        file_menu.addSeparator()
+
+        # 終了
+        exit_action = QAction("終了(&X)", self)
+        exit_action.setShortcut(QKeySequence.StandardKey.Quit)
+        exit_action.setStatusTip("アプリケーションを終了します")
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # 編集メニュー
+        edit_menu = menubar.addMenu("編集(&E)")
+
+        # 設定
+        settings_action = QAction("設定(&S)", self)
+        settings_action.setStatusTip("アプリケーション設定を開きます")
+        settings_action.triggered.connect(self.open_settings)
+        edit_menu.addAction(settings_action)
+
+        # 表示メニュー
+        view_menu = menubar.addMenu("表示(&V)")
+
+        # テーマ切り替え
+        theme_action = QAction("テーマ切り替え(&T)", self)
+        theme_action.setShortcut("Ctrl+T")
+        theme_action.setStatusTip("テーマを切り替えます")
+        theme_action.triggered.connect(self.toggle_theme)
+        view_menu.addAction(theme_action)
+
+        # ヘルプメニュー
+        help_menu = menubar.addMenu("ヘルプ(&H)")
+
+        # バージョン情報
+        about_action = QAction("バージョン情報(&A)", self)
+        about_action.setStatusTip("バージョン情報を表示します")
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+
+def _setup_status_bar(self):
+        """ステータスバー設定"""
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+        
+        # プログレスバー
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setMaximumWidth(200)
+        self.status_bar.addPermanentWidget(self.progress_bar)
+        
+        # ステータスラベル
+        self.status_label = QLabel()
+        self.status_bar.addPermanentWidget(self.status_label)
+        
+        # 準備完了メッセージ
+        self.status_bar.showMessage("準備完了")
+        self.status_label.setText("準備完了")
+
+    def _connect_signals(self):
+        """シグナル接続"""
+        if self.side_bar and self.results_table:
+            # スクリーニング開始
+            self.side_bar.start_screening.connect(self.start_screening)
+            self.side_bar.stop_screening.connect(self.stop_screening)
+
+            # 結果選択
+            self.results_table.row_selected.connect(self.on_result_selected)
+
+    def start_screening(self, config):
+        """スクリーニング開始"""
+        try:
+            # 既存のスレッドがあれば停止
+            if self.screening_thread and self.screening_thread.isRunning():
+                self.stop_screening()
+                return
+
+            # ワーカーとスレッド作成
+            self.screening_worker = ScreeningWorker(config, self.config_manager)
+            self.screening_thread = ScreeningThread(self.screening_worker)
+
+            # シグナル接続
+            self.screening_worker.progress_updated.connect(self._on_progress_updated)
+            self.screening_worker.result_found.connect(self._on_result_found)
+            self.screening_worker.finished.connect(self._on_screening_finished)
+            self.screening_worker.error.connect(self._on_screening_error)
+            self.screening_worker.status_updated.connect(self._on_status_updated)
+
+            # UI状態更新
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setValue(0)
+            if self.side_bar:
+                self.side_bar.set_processing(True)
+
+            # スレッド開始
+            self.screening_thread.start()
+
+        except Exception as e:
+            logger.error(f"Failed to start screening: {e}")
+            self.status_bar.showMessage(f"開始エラー: {e}")
+            if self.side_bar:
+                self.side_bar.set_processing(False)
+
+    def stop_screening(self):
+        """スクリーニング停止"""
+        if self.screening_thread and self.screening_thread.isRunning():
+            self.screening_thread.stop()
+            self.status_bar.showMessage("スクリーニングを停止中...")
+        
+        self.progress_bar.setVisible(False)
+        if self.side_bar:
+            self.side_bar.set_processing(False)
+
+    def on_result_selected(self, result):
+        """結果選択時の処理"""
+        self.status_bar.showMessage(f"選択: {result.symbol} - {result.name}")
+
+    def _on_progress_updated(self, current: int, total: int, message: str):
+        """プログレス更新"""
+        if total > 0:
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(current)
+        else:
+            # パーセント表示
+            self.progress_bar.setMaximum(100)
+            self.progress_bar.setValue(current)
+        
+        self.status_bar.showMessage(message)
+
+    def _on_result_found(self, result):
+        """個別結果発見"""
+        # リアルタイムで結果テーブルに追加（オプション）
+        pass
+
+    def _on_screening_finished(self, results):
+        """スクリーニング完了"""
+        self.progress_bar.setVisible(False)
+        
+        # 結果を表示
+        if self.results_table:
+            self.results_table.set_results(results)
+
+        self.status_bar.showMessage(f"スクリーニング完了: {len(results)}件")
+        self.status_label.setText(f"完了: {len(results)}件")
+        
+        if self.side_bar:
+            self.side_bar.set_processing(False)
+
+    def _on_screening_error(self, error_message: str):
+        """スクリーニングエラー"""
+        self.progress_bar.setVisible(False)
+        self.status_bar.showMessage(f"エラー: {error_message}")
+        
+        # エラーダイアログ表示
+        QMessageBox.critical(self, "スクリーニングエラー", error_message)
+        
+        if self.side_bar:
+            self.side_bar.set_processing(False)
+
+    def _on_status_updated(self, message: str):
+        """ステータス更新"""
+        self.status_bar.showMessage(message)
+        self.status_label.setText(message)
+
+    def open_csv_file(self):
+        """CSVファイルを開く"""
+        from PySide6.QtWidgets import QFileDialog
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "CSVファイルを開く",
+            "",
+            "CSVファイル (*.csv);;すべてのファイル (*.*)"
+        )
+        
+        if file_path:
+            try:
+                # CSVファイルから銘柄を読み込んでサイドバーに設定
+                if self.side_bar:
+                    self.side_bar.load_csv_file(file_path)
+                self.status_bar.showMessage(f"CSVファイルを読み込みました: {file_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "CSV読み込みエラー", f"CSVファイルの読み込みに失敗しました:\n{e}")
+
+    def export_results(self, format_type: str):
+        """結果をエクスポート"""
+        if not self.results_table:
+            QMessageBox.warning(self, "警告", "エクスポートする結果がありません")
+            return
+        
+        from PySide6.QtWidgets import QFileDialog
+        
+        # デフォルトのファイル名
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        if format_type == "csv":
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "CSV形式でエクスポート",
+                f"rule40_results_{timestamp}.csv",
+                "CSVファイル (*.csv)"
+            )
+        elif format_type == "xlsx":
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Excel形式でエクスポート",
+                f"rule40_results_{timestamp}.xlsx",
+                "Excelファイル (*.xlsx)"
+            )
+        elif format_type == "json":
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "JSON形式でエクスポート",
+                f"rule40_results_{timestamp}.json",
+                "JSONファイル (*.json)"
+            )
+        else:
+            return
+        
+        if file_path:
+            try:
+                # エクスポート実行
+                df = self.results_table.export_to_dataframe()
+                
+                if format_type == "csv":
+                    df.to_csv(file_path, index=False, encoding='utf-8-sig')
+                elif format_type == "xlsx":
+                    df.to_excel(file_path, index=False, engine='openpyxl')
+                elif format_type == "json":
+                    df.to_json(file_path, orient='records', force_ascii=False, indent=2)
+                
+                QMessageBox.information(self, "エクスポート完了", f"結果をエクスポートしました:\n{file_path}")
+                self.status_bar.showMessage(f"エクスポート完了: {file_path}")
+                
+            except Exception as e:
+                QMessageBox.critical(self, "エクスポートエラー", f"エクスポートに失敗しました:\n{e}")
+
+    def open_settings(self):
+        """設定ダイアログを開く"""
+        # TODO: 設定ダイアログを実装
+        QMessageBox.information(self, "設定", "設定ダイアログは現在開発中です")
+
+    def toggle_theme(self):
+        """テーマを切り替え"""
+        current_theme = self.config_manager.get('ui.theme', 'auto')
+        
+        if current_theme == 'auto':
+            new_theme = 'dark'
+        elif current_theme == 'dark':
+            new_theme = 'light'
+        else:
+            new_theme = 'auto'
+        
+        self.config_manager.set('ui.theme', new_theme)
+        
+        # テーマ適用
+        if new_theme == 'dark':
+            self.setStyleSheet("""
+                QMainWindow {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+                QTableWidget {
+                    background-color: #3c3c3c;
+                    color: #ffffff;
+                    alternate-background-color: #4a4a4a;
+                }
+                QGroupBox {
+                    color: #ffffff;
+                    border: 1px solid #555;
+                }
+            """)
+        elif new_theme == 'light':
+            self.setStyleSheet("")
+        else:  # auto
+            self.setStyleSheet("")
+        
+        self.status_bar.showMessage(f"テーマを変更しました: {new_theme}")
+
+    def show_about(self):
+        """バージョン情報を表示"""
+        about_text = """
+        <h3>Rule of 40 Screener</h3>
+        <p>バージョン: 0.1.0</p>
+        <p>Rule of 40に基づいた株式スクリーニングアプリケーション</p>
+        <br>
+        <p><b>機能:</b></p>
+        <ul>
+            <li>S&P 500/400、Nasdaq銘柄のスクリーニング</li>
+            <li>Rule of 40計算（営業利益版・EBITDA版）</li>
+            <li>リアルタイム財務データ取得</li>
+            <li>結果のエクスポート（CSV/Excel/JSON）</li>
+        </ul>
+        <br>
+        <p>開発チーム: Rule of 40 Screener Team</p>
+        <p>ライセンス: MIT License</p>
+        """
+        
+        QMessageBox.about(self, "バージョン情報", about_text)
+
+    def _setup_timers(self):
+        """タイマー設定"""
+        # 定期更新タイマー（後で実装）
+        # self.update_timer = QTimer()
+        # self.update_timer.timeout.connect(self.periodic_update)
+        # self.update_timer.start(60000)  # 1分ごと
+
+    def center_on_screen(self):
+        """画面中央に配置"""
+        from PySide6.QtGui import QGuiApplication
+
+        screen = QGuiApplication.primaryScreen()
+        if screen:
+            screen_geometry = screen.availableGeometry()
+            window_geometry = self.frameGeometry()
+
+            center_point = screen_geometry.center()
+            window_geometry.moveCenter(center_point)
+            self.move(window_geometry.topLeft())
+
+def closeEvent(self, event):
+        """ウィンドウクローズイベント"""
+        # スレッド停止
+        if self.screening_thread and self.screening_thread.isRunning():
+            self.screening_thread.stop()
+            self.screening_thread.wait(3000)  # 3秒待機
+        
+        # ウィンドウサイズと位置を保存
+        if self.config_manager.get('ui.window.remember_size', True):
+            self.config_manager.set('ui.window.width', self.width())
+            self.config_manager.set('ui.window.height', self.height())
+        
+        if self.config_manager.get('ui.window.remember_position', True):
+            self.config_manager.set('ui.window.x', self.x())
+            self.config_manager.set('ui.window.y', self.y())
+        
+        # 設定保存
+        try:
+            self.config_manager.save()
+        except Exception as e:
+            logger.warning(f"Failed to save config: {e}")
+        
+        logger.info("Application closing")
+        event.accept()
