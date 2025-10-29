@@ -85,7 +85,15 @@ def main():
         app.setOrganizationName("Rule of 40 Screener Team")
 
         # 設定マネージャ初期化
-        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        # PyInstallerで実行ファイル化された場合の対応
+        if getattr(sys, 'frozen', False):
+            # 実行ファイルの場合
+            base_path = sys._MEIPASS
+        else:
+            # 通常のPythonスクリプトの場合
+            base_path = os.path.dirname(__file__)
+
+        config_path = os.path.join(base_path, "config.yaml")
         config_manager = ConfigManager(config_path)
 
         # ログ設定
