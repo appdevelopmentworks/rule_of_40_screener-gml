@@ -4,10 +4,12 @@ block_cipher = None
 
 a = Analysis(
     ['src\\app.py'],
-    pathex=[],
+    pathex=['src'],
     binaries=[],
     datas=[
         ('src\\config.yaml', '.'),
+        ('src\\core', 'src\\core'),
+        ('src\\ui', 'src\\ui'),
         ('appimg.ico', '.'),
     ],
     hiddenimports=[
