@@ -195,11 +195,6 @@ QCheckBox::indicator:checked {
     image: none;
 }
 
-QCheckBox::indicator:checked::after {
-    content: "✓";
-    color: #ffffff;
-}
-
 QCheckBox::indicator:disabled {
     background-color: #252525;
     border: 1px solid #2d2d2d;

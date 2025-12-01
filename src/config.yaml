@@ -51,7 +51,7 @@ ui:
     remember_size: true
     width: 1500
     x: 786
-    y: 340
+    y: 337
 universe:
   csv_path: null
   exclude_symbols: []
