@@ -25,6 +25,7 @@ from core.domain.models import ConfigError
 
 # UI コンポーネント
 from ui.main_window import MainWindow
+from ui.themes import get_dark_theme, get_light_theme
 
 
 def setup_logging(config_manager: ConfigManager):
@@ -69,16 +70,31 @@ def load_theme(app: QApplication, config_manager: ConfigManager):
     if theme == "dark":
         # ダークテーマ適用
         app.setStyle("Fusion")
-        # TODO: ダークテーマスタイルシート適用
-        pass
+        app.setStyleSheet(get_dark_theme())
     elif theme == "light":
         # ライトテーマ適用
-        app.setStyle("WindowsVista")
-        # TODO: ライトテーマスタイルシート適用
-        pass
+        app.setStyle("Fusion")
+        app.setStyleSheet(get_light_theme())
     else:  # auto
-        # OS テーマに追従
-        pass
+        # システムのテーマを検出（Windowsの場合）
+        try:
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+            )
+            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+            winreg.CloseKey(key)
+            # 0 = dark, 1 = light
+            app.setStyle("Fusion")
+            if value == 1:
+                app.setStyleSheet(get_light_theme())
+            else:
+                app.setStyleSheet(get_dark_theme())
+        except:
+            # Windowsでない場合やエラーの場合はライトテーマをデフォルトに
+            app.setStyle("Fusion")
+            app.setStyleSheet(get_light_theme())
 
 
 def main():

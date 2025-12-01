@@ -21,10 +21,14 @@ from PySide6.QtWidgets import (
 try:
     from ..core.data.config_loader import ConfigManager
     from ..workers.screening_worker import ScreeningThread, ScreeningWorker
+    from .dialogs.settings_dialog import SettingsDialog
+    from .themes import get_dark_theme, get_light_theme
 except ImportError:
     try:
         from src.core.data.config_loader import ConfigManager
         from src.ui.workers.screening_worker import ScreeningThread, ScreeningWorker
+        from src.ui.dialogs.settings_dialog import SettingsDialog
+        from src.ui.themes import get_dark_theme, get_light_theme
     except ImportError:
         # Fallback for direct execution
         import sys
@@ -34,6 +38,8 @@ except ImportError:
         sys.path.insert(0, str(project_root))
         from src.core.data.config_loader import ConfigManager
         from src.ui.workers.screening_worker import ScreeningThread, ScreeningWorker
+        from src.ui.dialogs.settings_dialog import SettingsDialog
+        from src.ui.themes import get_dark_theme, get_light_theme
 
 logger = logging.getLogger(__name__)
 
@@ -410,8 +416,58 @@ class MainWindow(QMainWindow):
 
     def open_settings(self):
         """設定ダイアログを開く"""
-        # TODO: 設定ダイアログを実装
-        QMessageBox.information(self, "設定", "設定ダイアログは現在開発中です")
+        try:
+            dialog = SettingsDialog(self.config_manager, self)
+
+            # テーマ変更シグナルを接続
+            dialog.theme_changed.connect(self.apply_theme)
+
+            # ダイアログを表示
+            if dialog.exec():
+                logger.info("Settings updated")
+                # 設定が変更されたら適用
+                self.apply_theme(self.config_manager.get("ui.theme", "auto"))
+        except Exception as e:
+            logger.error(f"Failed to open settings dialog: {e}")
+            QMessageBox.critical(self, "エラー", f"設定ダイアログを開けませんでした:\n{e}")
+
+    def apply_theme(self, theme: str):
+        """テーマを適用
+
+        Args:
+            theme: "auto", "light", "dark"
+        """
+        try:
+            logger.info(f"Applying theme: {theme}")
+
+            if theme == "dark":
+                stylesheet = get_dark_theme()
+            elif theme == "light":
+                stylesheet = get_light_theme()
+            else:  # auto
+                # システムのテーマを検出（Windowsの場合）
+                try:
+                    import winreg
+                    key = winreg.OpenKey(
+                        winreg.HKEY_CURRENT_USER,
+                        r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+                    )
+                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+                    winreg.CloseKey(key)
+                    # 0 = dark, 1 = light
+                    stylesheet = get_light_theme() if value == 1 else get_dark_theme()
+                except:
+                    # Windowsでない場合やエラーの場合はライトテーマをデフォルトに
+                    stylesheet = get_light_theme()
+
+            # アプリケーション全体にスタイルシートを適用
+            from PySide6.QtWidgets import QApplication
+            QApplication.instance().setStyleSheet(stylesheet)
+
+            logger.info(f"Theme applied: {theme}")
+
+        except Exception as e:
+            logger.error(f"Failed to apply theme: {e}")
 
     def toggle_theme(self):
         """テーマを切り替え"""
@@ -425,31 +481,10 @@ class MainWindow(QMainWindow):
             new_theme = "auto"
 
         self.config_manager.set("ui.theme", new_theme)
+        self.config_manager.save()
 
         # テーマ適用
-        if new_theme == "dark":
-            self.setStyleSheet(
-                """
-                QMainWindow {
-                    background-color: #2b2b2b;
-                    color: #ffffff;
-                }
-                QTableWidget {
-                    background-color: #3c3c3c;
-                    color: #ffffff;
-                    alternate-background-color: #4a4a4a;
-                }
-                QGroupBox {
-                    color: #ffffff;
-                    border: 1px solid #555;
-                }
-            """
-            )
-        elif new_theme == "light":
-            self.setStyleSheet("")
-        else:  # auto
-            self.setStyleSheet("")
-
+        self.apply_theme(new_theme)
         self.status_bar.showMessage(f"テーマを変更しました: {new_theme}")
 
     def show_about(self):
