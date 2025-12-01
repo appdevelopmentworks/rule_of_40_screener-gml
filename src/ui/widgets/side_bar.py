@@ -128,9 +128,9 @@ class SideBar(QWidget):
         self.other_checkbox.setChecked(False)
         layout.addWidget(self.other_checkbox)
 
-        self.jpx_checkbox = QCheckBox("日本株（東証）")
-        self.jpx_checkbox.setChecked(False)
-        layout.addWidget(self.jpx_checkbox)
+        self.nikkei500_checkbox = QCheckBox("日本株（日経500）")
+        self.nikkei500_checkbox.setChecked(False)
+        layout.addWidget(self.nikkei500_checkbox)
 
         # CSVファイル
         csv_layout = QHBoxLayout()
@@ -314,7 +314,7 @@ class SideBar(QWidget):
             self.nasdaq100_checkbox.setChecked("nasdaq100" in sources)
             self.nasdaq_checkbox.setChecked("nasdaq" in sources)
             self.other_checkbox.setChecked("other" in sources)
-            self.jpx_checkbox.setChecked("jpx" in sources)
+            self.nikkei500_checkbox.setChecked("nikkei500" in sources)
 
             # Rule of 40 設定
             variant = self.config_manager.get("rule40.variant", "op")
@@ -365,8 +365,8 @@ class SideBar(QWidget):
             sources.append("nasdaq")
         if self.other_checkbox.isChecked():
             sources.append("other")
-        if self.jpx_checkbox.isChecked():
-            sources.append("jpx")
+        if self.nikkei500_checkbox.isChecked():
+            sources.append("nikkei500")
 
         # バリアント
         variant_map = {
@@ -502,6 +502,8 @@ class SideBar(QWidget):
             sources.append("nasdaq")
         if self.other_checkbox.isChecked():
             sources.append("other")
+        if self.nikkei500_checkbox.isChecked():
+            sources.append("nikkei500")
         if self.csv_checkbox.isChecked():
             sources.append("csv")
         
