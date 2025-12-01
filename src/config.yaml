@@ -21,7 +21,7 @@ export:
   encoding: utf-8
   include_metadata: true
 fetch:
-  backoff_factor: 2
+  backoff_factor: 2.0
   cache_ttl_hours: 24
   max_workers: 12
   retry_attempts: 3
@@ -46,12 +46,12 @@ ui:
   locale: ja
   theme: auto
   window:
-    height: 872
+    height: 1000
     remember_position: true
     remember_size: true
-    width: 1536
-    x: 903
-    y: 288
+    width: 1500
+    x: 378
+    y: 182
 universe:
   csv_path: null
   exclude_symbols: []
