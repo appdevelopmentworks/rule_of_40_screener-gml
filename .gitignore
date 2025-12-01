@@ -174,5 +174,9 @@ build/
 *.dmg
 *.AppImage
 
+# Nuitka build outputs
+*.dist/
+*.build/
+
 # Config overrides (keep default config)
 src/config.local.yaml
