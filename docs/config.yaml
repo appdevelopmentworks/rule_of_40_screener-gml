@@ -27,7 +27,7 @@ rule40:
   
 # Universe Settings
 universe:
-  sources: [sp500, sp400, nasdaq, other]
+  sources: [sp500]    # Default: S&P 500 only. Available: sp500, sp400, nasdaq100, nasdaq, other, jpx
   csv_path: null      # Custom CSV file path (symbol,name)
   exclude_symbols: [] # Symbols to exclude from analysis
   

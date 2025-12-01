@@ -45,8 +45,11 @@ class WikipediaSP500(BaseSymbolSource):
             if not tables:
                 raise ParseError("No tables found on Wikipedia page")
 
-            # 最初のテーブルが S&P 500 情報
-            df = tables[0]
+            # 2番目のテーブルが S&P 500 情報（1番目は警告メッセージ）
+            if len(tables) < 2:
+                raise ParseError("Expected at least 2 tables on Wikipedia page")
+
+            df = tables[1]
 
             # 必要な列を確認
             required_columns = ["Symbol", "Security"]
@@ -142,6 +145,7 @@ class WikipediaSP400(BaseSymbolSource):
             if not tables:
                 raise ParseError("No tables found on Wikipedia page")
 
+            # S&P 400は最初のテーブルが正しいデータ
             df = tables[0]
 
             # 必要な列を確認

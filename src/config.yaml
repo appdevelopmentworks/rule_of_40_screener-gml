@@ -50,13 +50,10 @@ ui:
     remember_position: true
     remember_size: true
     width: 1536
-    x: 768
-    y: 404
+    x: 921
+    y: 297
 universe:
   csv_path: null
   exclude_symbols: []
   sources:
   - sp500
-  - sp400
-  - nasdaq
-  - other

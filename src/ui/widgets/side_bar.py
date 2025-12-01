@@ -113,8 +113,12 @@ class SideBar(QWidget):
         layout.addWidget(self.sp500_checkbox)
 
         self.sp400_checkbox = QCheckBox("S&P 400")
-        self.sp400_checkbox.setChecked(True)
+        self.sp400_checkbox.setChecked(False)
         layout.addWidget(self.sp400_checkbox)
+
+        self.nasdaq100_checkbox = QCheckBox("Nasdaq 100")
+        self.nasdaq100_checkbox.setChecked(False)
+        layout.addWidget(self.nasdaq100_checkbox)
 
         self.nasdaq_checkbox = QCheckBox("Nasdaq 全銘柄")
         self.nasdaq_checkbox.setChecked(False)
@@ -123,6 +127,10 @@ class SideBar(QWidget):
         self.other_checkbox = QCheckBox("その他上場銘柄")
         self.other_checkbox.setChecked(False)
         layout.addWidget(self.other_checkbox)
+
+        self.jpx_checkbox = QCheckBox("日本株（東証）")
+        self.jpx_checkbox.setChecked(False)
+        layout.addWidget(self.jpx_checkbox)
 
         # CSVファイル
         csv_layout = QHBoxLayout()
@@ -300,11 +308,13 @@ class SideBar(QWidget):
         """設定を読み込み"""
         try:
             # ユニバース設定
-            sources = self.config_manager.get("universe.sources", ["sp500", "sp400"])
+            sources = self.config_manager.get("universe.sources", ["sp500"])
             self.sp500_checkbox.setChecked("sp500" in sources)
             self.sp400_checkbox.setChecked("sp400" in sources)
+            self.nasdaq100_checkbox.setChecked("nasdaq100" in sources)
             self.nasdaq_checkbox.setChecked("nasdaq" in sources)
             self.other_checkbox.setChecked("other" in sources)
+            self.jpx_checkbox.setChecked("jpx" in sources)
 
             # Rule of 40 設定
             variant = self.config_manager.get("rule40.variant", "op")
@@ -349,10 +359,14 @@ class SideBar(QWidget):
             sources.append("sp500")
         if self.sp400_checkbox.isChecked():
             sources.append("sp400")
+        if self.nasdaq100_checkbox.isChecked():
+            sources.append("nasdaq100")
         if self.nasdaq_checkbox.isChecked():
             sources.append("nasdaq")
         if self.other_checkbox.isChecked():
             sources.append("other")
+        if self.jpx_checkbox.isChecked():
+            sources.append("jpx")
 
         # バリアント
         variant_map = {
@@ -482,6 +496,8 @@ class SideBar(QWidget):
             sources.append("sp500")
         if self.sp400_checkbox.isChecked():
             sources.append("sp400")
+        if self.nasdaq100_checkbox.isChecked():
+            sources.append("nasdaq100")
         if self.nasdaq_checkbox.isChecked():
             sources.append("nasdaq")
         if self.other_checkbox.isChecked():

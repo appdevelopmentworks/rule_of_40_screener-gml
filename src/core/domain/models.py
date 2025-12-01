@@ -41,6 +41,9 @@ class Market(Enum):
     NASDAQ = "NASDAQ"
     AMEX = "AMEX"
     JPX = "JPX"  # 日本取引所
+    TSE_PRIME = "TSE_PRIME"  # 東証プライム
+    TSE_STANDARD = "TSE_STANDARD"  # 東証スタンダード
+    TSE_GROWTH = "TSE_GROWTH"  # 東証グロース
     OTHER = "OTHER"
 
 

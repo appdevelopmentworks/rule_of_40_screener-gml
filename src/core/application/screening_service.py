@@ -9,7 +9,8 @@ from typing import List, Optional
 
 try:
     from ..adapters.csv_source import CSVFileSource
-    from ..adapters.nasdaq_txt import NasdaqListed, OtherListed
+    from ..adapters.jpx_listed import JPXListedSource
+    from ..adapters.nasdaq_txt import Nasdaq100, NasdaqListed, OtherListed
     from ..adapters.wikipedia_sp500 import WikipediaSP400, WikipediaSP500
     from ..data.cache import CacheManager
     from ..data.config_loader import ConfigManager
@@ -25,7 +26,8 @@ try:
     from ..domain.rule40 import Rule40Calculator
 except ImportError:
     from src.core.adapters.csv_source import CSVFileSource
-    from src.core.adapters.nasdaq_txt import NasdaqListed, OtherListed
+    from src.core.adapters.jpx_listed import JPXListedSource
+    from src.core.adapters.nasdaq_txt import Nasdaq100, NasdaqListed, OtherListed
     from src.core.adapters.wikipedia_sp500 import WikipediaSP400, WikipediaSP500
     from src.core.data.cache import CacheManager
     from src.core.data.config_loader import ConfigManager
@@ -64,8 +66,10 @@ class ScreeningService:
         self.data_sources = {
             "sp500": WikipediaSP500(),
             "sp400": WikipediaSP400(),
+            "nasdaq100": Nasdaq100(),
             "nasdaq": NasdaqListed(),
             "other": OtherListed(),
+            "jpx": JPXListedSource(),
         }
 
     def screen_stocks(
