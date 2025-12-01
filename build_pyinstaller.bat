@@ -46,7 +46,7 @@ echo ========================================
 pyinstaller Rule40Screener.spec --clean --noconfirm
 
 REM ビルド結果の確認
-if exist dist\Rule40Screener.exe (
+if exist "dist\Rule40Screener.exe" (
     echo.
     echo ========================================
     echo ビルド成功！
@@ -55,11 +55,11 @@ if exist dist\Rule40Screener.exe (
     echo 実行ファイル: dist\Rule40Screener.exe
     echo.
     echo 実行ファイルのサイズ:
-    dir dist\Rule40Screener.exe | find "Rule40Screener.exe"
+    dir "dist\Rule40Screener.exe" | find "Rule40Screener.exe"
     echo.
     echo エクスプローラーで開きますか？ (Y/N)
     set /p OPEN=
-    if /i "%OPEN%"=="Y" explorer dist
+    if /i "%OPEN%"=="Y" explorer "dist"
 ) else (
     echo.
     echo ========================================

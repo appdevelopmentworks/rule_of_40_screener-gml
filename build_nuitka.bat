@@ -81,7 +81,7 @@ nuitka --standalone ^
     src\app.py
 
 REM ビルド結果の確認
-if exist Rule40Screener.exe (
+if exist "Rule40Screener.exe" (
     echo.
     echo ========================================
     echo ビルド成功！
@@ -90,13 +90,13 @@ if exist Rule40Screener.exe (
     echo 実行ファイル: Rule40Screener.exe
     echo.
     echo 実行ファイルのサイズ:
-    dir Rule40Screener.exe | find "Rule40Screener.exe"
+    dir "Rule40Screener.exe" | find "Rule40Screener.exe"
     echo.
     echo 注意: 初回実行時は少し時間がかかる場合があります
     echo.
     echo エクスプローラーで開きますか？ (Y/N)
     set /p OPEN=
-    if /i "%OPEN%"=="Y" explorer .
+    if /i "%OPEN%"=="Y" explorer "."
 ) else (
     echo.
     echo ========================================
